@@ -1,0 +1,75 @@
+---
+title: "Course project 1"
+author: "Mohanad"
+date: "7/17/2020"
+output: html_document
+---
+Here we are gonna load the data and delete the NA Values
+
+```{r}
+row_data=read.csv("./activity.csv")
+data=na.omit(row_data)
+data$date=as.Date(data$date)
+```
+let us make another data frame called "stepsbyday" and aggregate the steps by date
+```{r}
+stepsbyday <- aggregate(steps~date,data=data,sum)
+```
+let us plot the histogram 
+```{r}
+hist(stepsbyday$steps)
+```
+we will compute the mean and median of stepsbyday
+```{r}
+mean(stepsbyday$steps)
+median(stepsbyday$steps)
+``` 
+we will now calculate the average by day and plot it
+```{r}
+averagebyday <- aggregate(steps~interval,data=data,mean)
+plot(averagebyday$interval,averagebyday$steps,type='l',main="Average by day",xlab="Interval",ylab="Average of steps")
+```
+
+```{r} 
+maximum=max(averagebyday$steps)
+averagebyday[grepl(maximum,averagebyday$steps),]$interval
+```
+let us replace the number of rows with NA with the mean for 5-minute interval
+```{r}
+data_imputed <- row_data
+for (i in 1:nrow(data_imputed)) {
+  if (is.na(data_imputed$steps[i])) {
+     markup<-data_imputed$interval[i]
+     data_imputed$steps[i]<-averagebyday[averagebyday$interval%in%markup,]$steps
+     
+  }
+}
+head(data_imputed)
+df_imputed_steps_by_day <- aggregate(steps ~ date, data_imputed, sum)
+hist(df_imputed_steps_by_day$steps, main="Histogram of total number of steps per day (imputed)", 
+     xlab="Total number of steps in a day")
+mean(df_imputed_steps_by_day$steps)
+median(df_imputed_steps_by_day$steps)
+```
+*Are there differences in activity patterns between weekdays and weekends?*
+```{r}
+data_imputed['type_of_day'] <- weekdays(as.Date(data_imputed$date))
+data_imputed$type_of_day[data_imputed$type_of_day  %in% c('Saturday','Sunday') ] <- "weekend"
+data_imputed$type_of_day[data_imputed$type_of_day != "weekend"] <- "weekday"
+data_imputed$type_of_day <- as.factor(data_imputed$type_of_day)
+
+# calculate average steps by interval across all days
+df_imputed_steps_by_interval <- aggregate(steps ~ interval + type_of_day, data_imputed, mean)
+library(ggplot2)
+# creat a plot
+qplot(interval, 
+      steps, 
+      data = df_imputed_steps_by_interval, 
+      type = 'l', 
+      geom=c("line"),
+      xlab = "Interval", 
+      ylab = "Number of steps", 
+      main = "") +
+  facet_wrap(~ type_of_day, ncol = 1)
+```
+
